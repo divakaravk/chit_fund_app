@@ -118,16 +118,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                   Column(
                     children: [
                       Container(
-                        width: 72,
-                        height: 72,
+                        width: 80,
+                        height: 80,
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
+                          color: Colors.white.withOpacity(0.15),
                           borderRadius: BorderRadius.circular(20),
                         ),
-                        child: const Icon(
-                          Icons.account_balance_wallet_rounded,
-                          size: 40,
-                          color: Colors.white,
+                        padding: const EdgeInsets.all(8),
+                        child: Image.asset(
+                          'asssets/images/chitfundlogo.png',
+                          fit: BoxFit.contain,
                         ),
                       )
                           .animate()

@@ -84,9 +84,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               child: Row(
                 children: [
                   Container(
-                    width: 56, height: 56,
-                    decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), borderRadius: BorderRadius.circular(16)),
-                    child: const Icon(Icons.business_rounded, color: Colors.white, size: 30),
+                    width: 60, height: 60,
+                    decoration: BoxDecoration(color: Colors.white.withOpacity(0.15), borderRadius: BorderRadius.circular(16)),
+                    padding: const EdgeInsets.all(8),
+                    child: Image.asset('asssets/images/chitfundlogo.png', fit: BoxFit.contain),
                   ),
                   const SizedBox(width: 16),
                   Expanded(

@@ -45,16 +45,16 @@ class _SplashScreenState extends State<SplashScreen> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Container(
-                width: 100,
-                height: 100,
+                width: 110,
+                height: 110,
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
+                  color: Colors.white.withOpacity(0.15),
                   borderRadius: BorderRadius.circular(28),
                 ),
-                child: const Icon(
-                  Icons.account_balance_wallet_rounded,
-                  size: 56,
-                  color: Colors.white,
+                padding: const EdgeInsets.all(10),
+                child: Image.asset(
+                  'asssets/images/chitfundlogo.png',
+                  fit: BoxFit.contain,
                 ),
               )
                   .animate()
