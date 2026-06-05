@@ -64,7 +64,6 @@ class _AddUserScreenState extends ConsumerState<AddUserScreen> {
     setState(() => _isLoading = false);
     if (!mounted) return;
     if (ok) {
-      SnackbarHelper.showSuccess(context, 'Member added successfully');
       context.pop();
     } else {
       SnackbarHelper.showError(context, 'Failed to add member');

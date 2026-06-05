@@ -65,7 +65,6 @@ class _AddPaymentScreenState extends ConsumerState<AddPaymentScreen> {
     setState(() => _isLoading = false);
     if (!mounted) return;
     if (ok) {
-      SnackbarHelper.showSuccess(context, 'Payment recorded');
       context.pop();
     } else {
       SnackbarHelper.showError(context, 'Failed to record payment');

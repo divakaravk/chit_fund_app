@@ -70,7 +70,6 @@ class _AddAuctionScreenState extends ConsumerState<AddAuctionScreen> {
     setState(() => _isLoading = false);
     if (!mounted) return;
     if (ok) {
-      SnackbarHelper.showSuccess(context, 'Auction scheduled');
       context.pop();
     } else {
       SnackbarHelper.showError(context, 'Failed to schedule auction');

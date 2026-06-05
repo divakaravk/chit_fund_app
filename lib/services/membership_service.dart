@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import '../core/network/dio_client.dart';
 import '../core/network/api_endpoints.dart';
 import '../core/network/api_response.dart';
@@ -17,17 +18,42 @@ class MembershipService {
       final list = (data as List).map((e) => MembershipModel.fromJson(e)).toList();
       return ApiResponse.success(list);
     } on DioException catch (e) {
+      debugPrint('[MembershipService] getMemberships error: ${e.response?.data}');
       return ApiResponse.error(e.response?.data?['message'] ?? 'Failed to load memberships');
+    } catch (e) {
+      debugPrint('[MembershipService] getMemberships unexpected: $e');
+      return ApiResponse.error('Failed to load memberships: $e');
     }
   }
 
   Future<ApiResponse<MembershipModel>> addMembership(Map<String, dynamic> data) async {
     try {
+      debugPrint('[MembershipService] addMembership payload: $data');
       final response = await _dio.post(ApiEndpoints.addMembership, data: data);
-      final membership = MembershipModel.fromJson(response.data['data'] ?? response.data);
-      return ApiResponse.success(membership);
+      debugPrint('[MembershipService] addMembership response: ${response.data}');
+
+      final respData = response.data as Map<String, dynamic>? ?? {};
+      if (respData['success'] == false) {
+        return ApiResponse.error(respData['message']?.toString() ?? 'Failed to add membership');
+      }
+
+      // PHP returns {success, message, id} — build model from sent data
+      final merged = {
+        ...data,
+        'id': respData['id']?.toString() ?? '',
+        'status': 'active',
+        'has_won_auction': 0,
+      };
+      return ApiResponse.success(MembershipModel.fromJson(merged));
     } on DioException catch (e) {
-      return ApiResponse.error(e.response?.data?['message'] ?? 'Failed to add membership');
+      debugPrint('[MembershipService] addMembership DioError: ${e.response?.statusCode} — ${e.response?.data}');
+      final msg = e.response?.data;
+      return ApiResponse.error(
+        (msg is Map ? msg['message'] : null) ?? 'Failed to add membership (${e.response?.statusCode})',
+      );
+    } catch (e) {
+      debugPrint('[MembershipService] addMembership unexpected: $e');
+      return ApiResponse.error('Failed to add membership: $e');
     }
   }
 
@@ -36,6 +62,7 @@ class MembershipService {
       await _dio.delete(ApiEndpoints.deleteMembership(id));
       return ApiResponse.success(true);
     } on DioException catch (e) {
+      debugPrint('[MembershipService] deleteMembership error: ${e.response?.data}');
       return ApiResponse.error(e.response?.data?['message'] ?? 'Failed to remove membership');
     }
   }

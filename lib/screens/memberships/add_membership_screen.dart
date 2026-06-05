@@ -41,16 +41,16 @@ class _AddMembershipScreenState extends ConsumerState<AddMembershipScreen> {
     }
     setState(() => _isLoading = true);
     final notifier = MembershipsNotifier(ref.read(membershipServiceProvider), _selectedGroupId);
+    // PHP expects: chit_group_id, user_id, ticket_number
     final data = {
-      'group_id': _selectedGroupId,
+      'chit_group_id': _selectedGroupId,
       'user_id': _selectedUserId,
-      'slot_number': int.tryParse(_slotCtrl.text) ?? 1,
+      'ticket_number': int.tryParse(_slotCtrl.text) ?? 1,
     };
     final ok = await notifier.addMembership(data);
     setState(() => _isLoading = false);
     if (!mounted) return;
     if (ok) {
-      SnackbarHelper.showSuccess(context, 'Membership added');
       context.pop();
     } else {
       SnackbarHelper.showError(context, 'Failed to add membership');

@@ -21,22 +21,33 @@ class MembershipModel {
     this.joinedAt,
   });
 
+  // DB columns: chit_group_id, ticket_number, has_won_auction, joined_at
   factory MembershipModel.fromJson(Map<String, dynamic> json) => MembershipModel(
         id: json['id']?.toString() ?? '',
-        groupId: json['group_id']?.toString() ?? '',
+        groupId: json['chit_group_id']?.toString() ?? json['group_id']?.toString() ?? '',
         userId: json['user_id']?.toString() ?? '',
-        userName: json['user_name'] ?? '',
-        userPhone: json['user_phone'] ?? '',
-        slotNumber: int.tryParse(json['slot_number']?.toString() ?? '0') ?? 0,
+        userName: json['user_name'] ?? json['full_name'] ?? '',
+        userPhone: json['user_phone'] ?? json['phone_number'] ?? '',
+        slotNumber: int.tryParse(
+              json['ticket_number']?.toString() ??
+              json['slot_number']?.toString() ??
+              '0',
+            ) ?? 0,
         status: json['status'] ?? 'active',
-        hasWon: json['has_won'] == 1 || json['has_won'] == true || json['has_won'] == '1',
-        joinedAt: json['joined_at'] != null ? DateTime.tryParse(json['joined_at']) : null,
+        hasWon: json['has_won_auction'] == 1 ||
+            json['has_won_auction'] == true ||
+            json['has_won_auction'] == '1' ||
+            json['has_won'] == 1 ||
+            json['has_won'] == true,
+        joinedAt: json['joined_at'] != null
+            ? DateTime.tryParse(json['joined_at'])
+            : null,
       );
 
   Map<String, dynamic> toJson() => {
-        'group_id': groupId,
+        'chit_group_id': groupId,
         'user_id': userId,
-        'slot_number': slotNumber,
+        'ticket_number': slotNumber,
         'status': status,
       };
 }

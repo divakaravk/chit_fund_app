@@ -27,18 +27,23 @@ class SchemeModel {
     this.createdAt,
   });
 
+  // PHP DB columns: scheme_name, scheme_code, foreman_commission_pct
   factory SchemeModel.fromJson(Map<String, dynamic> json) => SchemeModel(
         id: json['id']?.toString() ?? '',
         companyId: json['company_id']?.toString() ?? '',
-        name: json['name'] ?? '',
-        code: json['code'] ?? '',
+        name: json['scheme_name'] ?? json['name'] ?? '',
+        code: json['scheme_code'] ?? json['code'] ?? '',
         chitAmount: double.tryParse(json['chit_amount']?.toString() ?? '0') ?? 0,
         durationMonths: int.tryParse(json['duration_months']?.toString() ?? '0') ?? 0,
         totalMembers: int.tryParse(json['total_members']?.toString() ?? '0') ?? 0,
         monthlyContribution:
             double.tryParse(json['monthly_contribution']?.toString() ?? '0') ?? 0,
         foremanCommissionPercent:
-            double.tryParse(json['foreman_commission_percent']?.toString() ?? '0') ?? 0,
+            double.tryParse(
+              json['foreman_commission_pct']?.toString() ??
+              json['foreman_commission_percent']?.toString() ??
+              '0',
+            ) ?? 0,
         bidType: json['bid_type'] ?? 'open',
         status: json['status'] ?? 'active',
         createdAt: json['created_at'] != null
@@ -48,13 +53,13 @@ class SchemeModel {
 
   Map<String, dynamic> toJson() => {
         'company_id': companyId,
-        'name': name,
-        'code': code,
+        'scheme_name': name,
+        'scheme_code': code,
         'chit_amount': chitAmount,
         'duration_months': durationMonths,
         'total_members': totalMembers,
         'monthly_contribution': monthlyContribution,
-        'foreman_commission_percent': foremanCommissionPercent,
+        'foreman_commission_pct': foremanCommissionPercent,
         'bid_type': bidType,
         'status': status,
       };

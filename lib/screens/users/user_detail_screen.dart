@@ -158,7 +158,6 @@ class _UserDetailBody extends StatelessWidget {
       final ok = await ref.read(usersNotifierProvider.notifier).deactivateUser(user.id);
       if (!context.mounted) return;
       if (ok) {
-        SnackbarHelper.showSuccess(context, 'User deactivated');
         context.pop();
       } else {
         SnackbarHelper.showError(context, 'Failed to deactivate');

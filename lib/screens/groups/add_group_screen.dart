@@ -53,20 +53,26 @@ class _AddGroupScreenState extends ConsumerState<AddGroupScreen> {
     }
     setState(() => _isLoading = true);
     final companyId = await LocalStorage.getCompanyId() ?? '';
+    // foreman_user_id is required by PHP — use logged-in user as default foreman
+    final foremanUserId = await LocalStorage.getUserId() ?? '';
+    final startDateStr = _startDate != null
+        ? '${_startDate!.year}-${_startDate!.month.toString().padLeft(2, '0')}-${_startDate!.day.toString().padLeft(2, '0')}'
+        : DateTime.now().toIso8601String().substring(0, 10);
     final data = {
       'company_id': companyId,
       'scheme_id': _selectedSchemeId,
       'group_code': _codeCtrl.text.trim(),
-      'start_date': _startDate?.toIso8601String() ?? DateTime.now().toIso8601String(),
+      'foreman_user_id': foremanUserId,
+      'start_date': startDateStr,
     };
     final ok = await ref.read(groupsProvider.notifier).addGroup(data);
     setState(() => _isLoading = false);
     if (!mounted) return;
     if (ok) {
-      SnackbarHelper.showSuccess(context, 'Group created successfully');
       context.pop();
     } else {
-      SnackbarHelper.showError(context, 'Failed to create group');
+      final err = ref.read(groupsProvider).error;
+      SnackbarHelper.showError(context, err?.toString() ?? 'Failed to create group');
     }
   }
 

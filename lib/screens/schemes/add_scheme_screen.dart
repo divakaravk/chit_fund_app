@@ -45,25 +45,28 @@ class _AddSchemeScreenState extends ConsumerState<AddSchemeScreen> {
     setState(() => _isLoading = true);
     final companyId = await LocalStorage.getCompanyId() ?? '';
     final chitAmount = double.tryParse(_amountCtrl.text.replaceAll(',', '')) ?? 0;
+    // Field names must match PHP: scheme_name, scheme_code, foreman_commission_pct
     final data = {
       'company_id': companyId,
-      'name': _nameCtrl.text.trim(),
-      'code': _codeCtrl.text.trim(),
+      'scheme_name': _nameCtrl.text.trim(),
+      'scheme_code': _codeCtrl.text.trim(),
       'chit_amount': chitAmount,
       'duration_months': _duration,
       'total_members': _members,
       'monthly_contribution': _monthly,
-      'foreman_commission_percent': _commission,
+      'foreman_commission_pct': _commission,
       'bid_type': _bidType,
     };
     final ok = await ref.read(schemesProvider.notifier).addScheme(data);
     setState(() => _isLoading = false);
     if (!mounted) return;
     if (ok) {
-      SnackbarHelper.showSuccess(context, 'Scheme created successfully');
+      // Pop first — then show snackbar on parent screen.
+      // Showing snackbar before pop causes navigator lock (Flushbar pushes a route).
       context.pop();
     } else {
-      SnackbarHelper.showError(context, 'Failed to create scheme');
+      final err = ref.read(schemesProvider).error;
+      SnackbarHelper.showError(context, err?.toString() ?? 'Failed to create scheme');
     }
   }
 
