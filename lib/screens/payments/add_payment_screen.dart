@@ -18,17 +18,18 @@ class AddPaymentScreen extends ConsumerStatefulWidget {
 class _AddPaymentScreenState extends ConsumerState<AddPaymentScreen> {
   final _formKey = GlobalKey<FormState>();
   final _amountCtrl = TextEditingController();
-  final _monthCtrl = TextEditingController();
-  final _notesCtrl = TextEditingController();
   String? _selectedMembershipId;
+  String? _paymentType;
+  String? _paymentMode;
   DateTime? _dueDate;
   bool _isLoading = false;
+
+  static const _paymentTypes = ['monthly_contribution', 'registration_fee', 'penalty', 'other'];
+  static const _paymentModes = ['cash', 'upi', 'online', 'cheque', 'bank_transfer'];
 
   @override
   void dispose() {
     _amountCtrl.dispose();
-    _monthCtrl.dispose();
-    _notesCtrl.dispose();
     super.dispose();
   }
 
@@ -49,17 +50,30 @@ class _AddPaymentScreenState extends ConsumerState<AddPaymentScreen> {
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     if (_selectedMembershipId == null) {
-      SnackbarHelper.showError(context, 'Please select a membership');
+      SnackbarHelper.showError(context, 'Please select a member');
+      return;
+    }
+    if (_paymentType == null) {
+      SnackbarHelper.showError(context, 'Please select payment type');
+      return;
+    }
+    if (_paymentMode == null) {
+      SnackbarHelper.showError(context, 'Please select payment mode');
+      return;
+    }
+    if (_dueDate == null) {
+      SnackbarHelper.showError(context, 'Please select due date');
       return;
     }
     setState(() => _isLoading = true);
+    final d = _dueDate!;
+    final dateStr = '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
     final data = {
       'membership_id': _selectedMembershipId,
-      'cycle_month': int.tryParse(_monthCtrl.text) ?? 1,
+      'payment_type': _paymentType,
       'amount': double.tryParse(_amountCtrl.text.replaceAll(',', '')) ?? 0,
-      'due_date': _dueDate?.toIso8601String(),
-      'notes': _notesCtrl.text.trim(),
-      'status': 'pending',
+      'payment_mode': _paymentMode,
+      'due_date': dateStr,
     };
     final ok = await ref.read(paymentsProvider.notifier).addPayment(data);
     setState(() => _isLoading = false);
@@ -113,7 +127,31 @@ class _AddPaymentScreenState extends ConsumerState<AddPaymentScreen> {
                   error: (_, __) => const SizedBox(),
                 ),
                 const SizedBox(height: 14),
-                _field(_monthCtrl, 'Cycle Month', Icons.calendar_month_rounded, type: TextInputType.number, validator: (v) => Validators.required(v, label: 'Cycle month')),
+                Text('Payment Type', style: AppTextStyles.label),
+                const SizedBox(height: 8),
+                DropdownButtonFormField<String>(
+                  value: _paymentType,
+                  decoration: _dec(),
+                  hint: Text('Select type', style: AppTextStyles.body.copyWith(color: AppColors.textHint)),
+                  items: _paymentTypes.map((t) => DropdownMenuItem(
+                    value: t,
+                    child: Text(t.replaceAll('_', ' ').toUpperCase()[0] + t.replaceAll('_', ' ').substring(1), style: AppTextStyles.body),
+                  )).toList(),
+                  onChanged: (v) => setState(() => _paymentType = v),
+                ),
+                const SizedBox(height: 14),
+                Text('Payment Mode', style: AppTextStyles.label),
+                const SizedBox(height: 8),
+                DropdownButtonFormField<String>(
+                  value: _paymentMode,
+                  decoration: _dec(),
+                  hint: Text('Select mode', style: AppTextStyles.body.copyWith(color: AppColors.textHint)),
+                  items: _paymentModes.map((m) => DropdownMenuItem(
+                    value: m,
+                    child: Text(m[0].toUpperCase() + m.substring(1), style: AppTextStyles.body),
+                  )).toList(),
+                  onChanged: (v) => setState(() => _paymentMode = v),
+                ),
                 const SizedBox(height: 14),
                 _field(_amountCtrl, 'Amount (₹)', Icons.currency_rupee_rounded, type: TextInputType.number, validator: Validators.amount, prefix: '₹ '),
                 const SizedBox(height: 14),
@@ -136,8 +174,6 @@ class _AddPaymentScreenState extends ConsumerState<AddPaymentScreen> {
                     ),
                   ),
                 ),
-                const SizedBox(height: 14),
-                _field(_notesCtrl, 'Notes (Optional)', Icons.notes_rounded),
                 const SizedBox(height: 24),
                 SizedBox(
                   width: double.infinity,

@@ -19,8 +19,8 @@ class BidModel {
         id: json['id']?.toString() ?? '',
         auctionId: json['auction_id']?.toString() ?? '',
         membershipId: json['membership_id']?.toString() ?? '',
-        bidderName: json['bidder_name'] ?? '',
-        amount: double.tryParse(json['amount']?.toString() ?? '0') ?? 0,
+        bidderName: json['full_name'] ?? json['bidder_name'] ?? '',
+        amount: double.tryParse(json['bid_amount']?.toString() ?? json['amount']?.toString() ?? '0') ?? 0,
         createdAt: json['created_at'] != null
             ? DateTime.tryParse(json['created_at'])
             : null,

@@ -8,9 +8,12 @@ import '../../core/utils/formatters.dart';
 import '../../models/group_model.dart';
 import '../../models/membership_model.dart';
 import '../../models/auction_model.dart';
+import '../../core/utils/snackbar_helper.dart';
+import '../../models/payment_model.dart';
 import '../../providers/group_provider.dart';
 import '../../providers/membership_provider.dart';
 import '../../providers/auction_provider.dart';
+import '../../providers/payment_provider.dart';
 
 class GroupDetailScreen extends ConsumerWidget {
   final String groupId;
@@ -209,8 +212,137 @@ class _PaymentsTab extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return Center(
-      child: Text('Payments for group $groupId', style: AppTextStyles.bodySecondary),
+    final membershipsAsync = ref.watch(membershipsProvider(groupId));
+    final paymentsState = ref.watch(paymentsProvider);
+
+    return membershipsAsync.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (e, _) => Center(child: Text('$e')),
+      data: (memberships) {
+        if (memberships.isEmpty) {
+          return _Empty(
+            label: 'No members in this group',
+            icon: Icons.people_outline_rounded,
+            onAdd: () => context.push('${AppRoutes.addMembership}?group_id=$groupId'),
+          );
+        }
+        final membershipIds = memberships.map((m) => m.id).toSet();
+        final nameMap = {for (final m in memberships) m.id: m.userName};
+
+        return paymentsState.when(
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (e, _) => Center(child: Text('$e')),
+          data: (allPayments) {
+            final payments = allPayments
+                .where((p) => membershipIds.contains(p.membershipId))
+                .toList();
+            if (payments.isEmpty) {
+              return _Empty(
+                label: 'No payments yet',
+                icon: Icons.payments_outlined,
+                onAdd: () => context.push(AppRoutes.addPayment),
+              );
+            }
+            return ListView.builder(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
+              itemCount: payments.length,
+              itemBuilder: (_, i) {
+                final p = payments[i];
+                return _GroupPaymentTile(
+                  payment: p,
+                  memberName: nameMap[p.membershipId] ?? p.memberName,
+                  onMarkPaid: () async {
+                    final ok = await ref.read(paymentsProvider.notifier).markPaid(p.id);
+                    if (context.mounted) {
+                      if (ok) SnackbarHelper.showSuccess(context, 'Marked as paid');
+                      else SnackbarHelper.showError(context, 'Failed to update');
+                    }
+                  },
+                );
+              },
+            );
+          },
+        );
+      },
+    );
+  }
+}
+
+class _GroupPaymentTile extends StatelessWidget {
+  final PaymentModel payment;
+  final String memberName;
+  final VoidCallback onMarkPaid;
+  const _GroupPaymentTile({required this.payment, required this.memberName, required this.onMarkPaid});
+
+  Color get _statusColor {
+    if (payment.isPaid) return AppColors.success;
+    if (payment.isOverdue) return AppColors.error;
+    return AppColors.warning;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dismissible(
+      key: ValueKey(payment.id),
+      direction: payment.isPaid ? DismissDirection.none : DismissDirection.endToStart,
+      background: Container(
+        margin: const EdgeInsets.only(bottom: 10),
+        decoration: BoxDecoration(color: AppColors.success, borderRadius: BorderRadius.circular(12)),
+        alignment: Alignment.centerRight,
+        padding: const EdgeInsets.only(right: 20),
+        child: const Icon(Icons.check_circle_outline, color: Colors.white),
+      ),
+      confirmDismiss: (_) async => !payment.isPaid,
+      onDismissed: (_) => onMarkPaid(),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 10),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 8)],
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 44, height: 44,
+              decoration: BoxDecoration(color: _statusColor.withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
+              child: Icon(
+                payment.isPaid ? Icons.check_circle_rounded : Icons.payments_rounded,
+                color: _statusColor, size: 22,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(memberName, style: AppTextStyles.body.copyWith(fontWeight: FontWeight.w600)),
+                  Text(payment.paymentType, style: AppTextStyles.caption),
+                  if (payment.dueDate != null && !payment.isPaid)
+                    Text('Due: ${Formatters.date(payment.dueDate!)}',
+                        style: AppTextStyles.caption.copyWith(
+                            color: payment.isOverdue ? AppColors.error : AppColors.textSecondary)),
+                ],
+              ),
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(Formatters.currency(payment.amount),
+                    style: AppTextStyles.subtitle.copyWith(color: AppColors.textPrimary)),
+                const SizedBox(height: 4),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(color: _statusColor.withOpacity(0.12), borderRadius: BorderRadius.circular(100)),
+                  child: Text(payment.status[0].toUpperCase() + payment.status.substring(1),
+                      style: AppTextStyles.caption.copyWith(color: _statusColor, fontWeight: FontWeight.w600)),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

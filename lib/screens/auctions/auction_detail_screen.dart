@@ -6,7 +6,9 @@ import '../../core/constants/app_text_styles.dart';
 import '../../core/utils/formatters.dart';
 import '../../core/utils/snackbar_helper.dart';
 import '../../models/auction_model.dart';
+import '../../models/membership_model.dart';
 import '../../providers/auction_provider.dart';
+import '../../providers/membership_provider.dart';
 
 class AuctionDetailScreen extends ConsumerWidget {
   final String auctionId;
@@ -14,7 +16,7 @@ class AuctionDetailScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final auctionsAsync = ref.watch(auctionsProvider(null));
+    final auctionsAsync = ref.watch(auctionByIdProvider(auctionId));
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -25,8 +27,7 @@ class AuctionDetailScreen extends ConsumerWidget {
         leading: IconButton(icon: const Icon(Icons.arrow_back_ios_rounded), onPressed: () => context.pop()),
       ),
       body: auctionsAsync.when(
-        data: (list) {
-          final auction = list.where((a) => a.id == auctionId).firstOrNull;
+        data: (auction) {
           if (auction == null) return Center(child: Text('Auction not found', style: AppTextStyles.body));
           return _AuctionDetailBody(auction: auction);
         },
@@ -44,6 +45,7 @@ class _AuctionDetailBody extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final bidsAsync = ref.watch(bidsProvider(auction.id));
+    ref.watch(membershipsProvider(auction.groupId)); // pre-load for Add Bid sheet
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
@@ -201,44 +203,83 @@ class _AuctionDetailBody extends ConsumerWidget {
   }
 
   void _showAddBidSheet(BuildContext context, WidgetRef ref) {
-    final nameCtrl = TextEditingController();
     final amountCtrl = TextEditingController();
+    final memberships = ref.read(membershipsProvider(auction.groupId)).valueOrNull ?? [];
+    MembershipModel? selected;
+
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
       isScrollControlled: true,
-      builder: (ctx) => Padding(
-        padding: EdgeInsets.fromLTRB(16, 16, 16, MediaQuery.viewInsetsOf(ctx).bottom + 16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(width: 40, height: 4, decoration: BoxDecoration(color: AppColors.divider, borderRadius: BorderRadius.circular(100))),
-            const SizedBox(height: 16),
-            Text('Add Bid', style: AppTextStyles.title),
-            const SizedBox(height: 16),
-            TextField(controller: nameCtrl, decoration: const InputDecoration(labelText: 'Bidder Name', border: OutlineInputBorder())),
-            const SizedBox(height: 12),
-            TextField(controller: amountCtrl, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Bid Amount (₹)', border: OutlineInputBorder(), prefixText: '₹ ')),
-            const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.white),
-                onPressed: () async {
-                  final service = ref.read(auctionServiceProvider);
-                  await service.addBid({
-                    'auction_id': auction.id,
-                    'bidder_name': nameCtrl.text,
-                    'amount': double.tryParse(amountCtrl.text) ?? 0,
-                    'membership_id': '',
-                  });
-                  if (ctx.mounted) Navigator.pop(ctx);
-                  ref.invalidate(bidsProvider);
-                },
-                child: const Text('Submit Bid'),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setState) => Padding(
+          padding: EdgeInsets.fromLTRB(16, 16, 16,
+              MediaQuery.viewInsetsOf(ctx).bottom + MediaQuery.paddingOf(ctx).bottom + 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(width: 40, height: 4, decoration: BoxDecoration(color: AppColors.divider, borderRadius: BorderRadius.circular(100))),
+              const SizedBox(height: 16),
+              Text('Add Bid', style: AppTextStyles.title),
+              const SizedBox(height: 16),
+              if (memberships.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Text('No members in this group', style: AppTextStyles.bodySecondary),
+                )
+              else
+                DropdownButtonFormField<MembershipModel>(
+                  value: selected,
+                  decoration: const InputDecoration(labelText: 'Select Member', border: OutlineInputBorder()),
+                  items: memberships
+                      .map((m) => DropdownMenuItem(
+                            value: m,
+                            child: Text('${m.userName} (Slot ${m.slotNumber})'),
+                          ))
+                      .toList(),
+                  onChanged: (m) => setState(() => selected = m),
+                ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: amountCtrl,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(labelText: 'Bid Amount (₹)', border: OutlineInputBorder(), prefixText: '₹ '),
               ),
-            ),
-          ],
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary, foregroundColor: Colors.white),
+                  onPressed: () async {
+                    final amount = double.tryParse(amountCtrl.text.trim());
+                    if (selected == null) {
+                      SnackbarHelper.showError(context, 'Please select a member');
+                      return;
+                    }
+                    if (amount == null || amount <= 0) {
+                      SnackbarHelper.showError(context, 'Enter a valid bid amount');
+                      return;
+                    }
+                    final service = ref.read(auctionServiceProvider);
+                    final result = await service.addBid({
+                      'auction_cycle_id': auction.id,
+                      'membership_id': selected!.id,
+                      'bid_amount': amount,
+                    });
+                    if (!ctx.mounted) return;
+                    if (result.success) {
+                      Navigator.pop(ctx);
+                      ref.invalidate(bidsProvider(auction.id));
+                      SnackbarHelper.showSuccess(context, 'Bid added successfully');
+                    } else {
+                      SnackbarHelper.showError(context, result.message ?? 'Failed to add bid');
+                    }
+                  },
+                  child: const Text('Submit Bid'),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -253,7 +294,8 @@ class _AuctionDetailBody extends ConsumerWidget {
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
       isScrollControlled: true,
       builder: (ctx) => Padding(
-        padding: EdgeInsets.fromLTRB(16, 16, 16, MediaQuery.viewInsetsOf(ctx).bottom + 16),
+        padding: EdgeInsets.fromLTRB(16, 16, 16,
+            MediaQuery.viewInsetsOf(ctx).bottom + MediaQuery.paddingOf(ctx).bottom + 16),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -280,6 +322,7 @@ class _AuctionDetailBody extends ConsumerWidget {
                   });
                   if (ctx.mounted) {
                     Navigator.pop(ctx);
+                    ref.invalidate(auctionByIdProvider);
                     ref.invalidate(auctionsProvider);
                     SnackbarHelper.showSuccess(context, 'Auction closed successfully');
                   }

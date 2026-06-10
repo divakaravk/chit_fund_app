@@ -1,7 +1,7 @@
 class ApiEndpoints {
   ApiEndpoints._();
 
-  static const String baseUrl = 'http://192.168.0.105/chit_fund_saas_api';
+  static const String baseUrl = 'https://vrsupporters.org/chit';
 
   // Companies
   static const String registerCompany = '/companies/register_company.php';

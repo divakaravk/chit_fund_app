@@ -59,12 +59,15 @@ class _AddAuctionScreenState extends ConsumerState<AddAuctionScreen> {
     }
     setState(() => _isLoading = true);
     final notifier = AuctionsNotifier(ref.read(auctionServiceProvider), _selectedGroupId);
+    // PHP expects chit_group_id and DATE format (YYYY-MM-DD) not ISO datetime
+    final date = _auctionDate ?? DateTime.now();
+    final dateStr =
+        '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
     final data = {
-      'group_id': _selectedGroupId,
+      'chit_group_id': _selectedGroupId,
       'cycle_month': int.tryParse(_monthCtrl.text) ?? 1,
       'prize_pool': double.tryParse(_prizeCtrl.text.replaceAll(',', '')) ?? 0,
-      'auction_date': _auctionDate?.toIso8601String() ?? DateTime.now().toIso8601String(),
-      'status': 'scheduled',
+      'auction_date': dateStr,
     };
     final ok = await notifier.addAuction(data);
     setState(() => _isLoading = false);

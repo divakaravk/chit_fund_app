@@ -2,6 +2,8 @@ class PaymentModel {
   final String id;
   final String membershipId;
   final String memberName;
+  final String paymentType;
+  final String paymentMode;
   final int cycleMonth;
   final double amount;
   final String status;
@@ -13,6 +15,8 @@ class PaymentModel {
     required this.id,
     required this.membershipId,
     required this.memberName,
+    required this.paymentType,
+    required this.paymentMode,
     required this.cycleMonth,
     required this.amount,
     required this.status,
@@ -28,7 +32,9 @@ class PaymentModel {
   factory PaymentModel.fromJson(Map<String, dynamic> json) => PaymentModel(
         id: json['id']?.toString() ?? '',
         membershipId: json['membership_id']?.toString() ?? '',
-        memberName: json['member_name'] ?? '',
+        memberName: json['member_name'] ?? json['full_name'] ?? '',
+        paymentType: json['payment_type'] ?? '',
+        paymentMode: json['payment_mode'] ?? '',
         cycleMonth: int.tryParse(json['cycle_month']?.toString() ?? '1') ?? 1,
         amount: double.tryParse(json['amount']?.toString() ?? '0') ?? 0,
         status: json['status'] ?? 'pending',

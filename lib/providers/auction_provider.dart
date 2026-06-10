@@ -13,6 +13,14 @@ final auctionsProvider =
   throw Exception(result.message);
 });
 
+final auctionByIdProvider =
+    FutureProvider.family<AuctionModel?, String>((ref, id) async {
+  final service = ref.read(auctionServiceProvider);
+  final result = await service.getAuctionById(id);
+  if (result.success) return result.data;
+  throw Exception(result.message);
+});
+
 final bidsProvider = FutureProvider.family<List<BidModel>, String>((ref, auctionId) async {
   final service = ref.read(auctionServiceProvider);
   final result = await service.getBids(auctionId);

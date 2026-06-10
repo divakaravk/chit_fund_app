@@ -392,7 +392,9 @@ class _AuctionTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return GestureDetector(
+      onTap: () => context.push('/auctions/${auction.id}'),
+      child: Container(
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -429,6 +431,7 @@ class _AuctionTile extends StatelessWidget {
           _StatusChip(status: auction.status),
         ],
       ),
+    ),
     );
   }
 }
